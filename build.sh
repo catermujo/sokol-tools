@@ -14,8 +14,21 @@ if [ -f "$TINT_RANGE_H" ] && [ -f "$TINT_RANGE_CC" ]; then
 fi
 
 ./fibs build
+
 if [ $(uname -s) = 'Darwin' ]; then
-    cp .fibs/build/macos-make-release/sokol-shdc .
+    SHDC_PROFILE="macos-make-release"
 else
-    cp .fibs/build/linux-make-release/sokol-shdc .
+    SHDC_PROFILE="linux-make-release"
+fi
+
+SHDC_DIST_PATH=".fibs/dist/$SHDC_PROFILE/sokol-shdc"
+SHDC_BUILD_PATH=".fibs/build/$SHDC_PROFILE/sokol-shdc"
+
+if [ -f "$SHDC_DIST_PATH" ]; then
+    cp "$SHDC_DIST_PATH" .
+elif [ -f "$SHDC_BUILD_PATH" ]; then
+    cp "$SHDC_BUILD_PATH" .
+else
+    echo "Error: sokol-shdc not found in $SHDC_DIST_PATH or $SHDC_BUILD_PATH"
+    exit 1
 fi
