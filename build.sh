@@ -25,13 +25,26 @@ if [ -f "$TINT_RANGE_H" ] && [ -f "$TINT_RANGE_CC" ]; then
     fi
 fi
 
-./fibs build
-
 if [ $(uname -s) = 'Darwin' ]; then
-    SHDC_PROFILE="macos-make-release"
+    PROFILES=("macos-make-release" "macos-ninja-release")
 else
-    SHDC_PROFILE="linux-make-release"
+    PROFILES=("linux-make-release" "linux-ninja-release")
 fi
+
+SHDC_PROFILE=""
+for profile in "${PROFILES[@]}"; do
+    if ./fibs config "$profile"; then
+        SHDC_PROFILE="$profile"
+        break
+    fi
+done
+
+if [ -z "$SHDC_PROFILE" ]; then
+    echo "Error: failed to configure sokol-tools with any profile: ${PROFILES[*]}"
+    exit 1
+fi
+
+./fibs build
 
 SHDC_DIST_PATH=".fibs/dist/$SHDC_PROFILE/sokol-shdc"
 SHDC_BUILD_PATH=".fibs/build/$SHDC_PROFILE/sokol-shdc"
