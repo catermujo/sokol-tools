@@ -2,6 +2,18 @@
 
 set -ex
 
+if ! command -v deno >/dev/null 2>&1; then
+    if [ -x "./sokol-shdc" ]; then
+        echo "WARN: deno not found; using existing ./sokol-shdc"
+        exit 0
+    fi
+    echo "Error: deno not found (required by ./fibs)"
+    echo "Install deno, then rerun build:"
+    echo "  Arch:   sudo pacman -S deno"
+    echo "  Debian: curl -fsSL https://deno.land/install.sh | sh"
+    exit 1
+fi
+
 TINT_RANGE_H="ext/tint-extract/src/tint/lang/core/ir/analysis/integer_range_analysis.h"
 TINT_RANGE_CC="ext/tint-extract/src/tint/lang/core/ir/analysis/integer_range_analysis.cc"
 
