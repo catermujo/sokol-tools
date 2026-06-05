@@ -10,7 +10,44 @@ namespace shdc::gen {
 
 using namespace refl;
 
+namespace {
+
+std::string slang_ext(Slang::Enum slang) {
+    switch (slang) {
+        case Slang::GLSL410:
+        case Slang::GLSL430:
+        case Slang::GLSL300ES:
+        case Slang::GLSL310ES:
+            return "glsl.bin";
+        case Slang::HLSL4:
+        case Slang::HLSL5:
+            return "hlsl.bin";
+        case Slang::METAL_MACOS:
+        case Slang::METAL_IOS:
+        case Slang::METAL_SIM:
+            return "metal.bin";
+        case Slang::WGSL:
+            return "wgsl.bin";
+        case Slang::SPIRV_VK:
+            return "spv";
+        default:
+            return "bin";
+    }
+}
+
+std::string sidecar_file(const std::string& output_file, const std::string& sidecar_name) {
+    const size_t slash_pos = output_file.find_last_of("/\\");
+    if (slash_pos == std::string::npos) {
+        return sidecar_name;
+    }
+    return output_file.substr(0, slash_pos + 1).append(sidecar_name);
+}
+
+} // namespace
+
 ErrMsg SokolOdinGenerator::begin(const GenInput& gen) {
+    mod_prefix.clear();
+    sidecar_blobs.clear();
     if (!gen.inp.module.empty()) {
         mod_prefix = fmt::format("{}_", gen.inp.module);
     }
@@ -218,10 +255,11 @@ void SokolOdinGenerator::gen_shader_desc_func(const GenInput& gen, const Program
                     default: dsn = "INVALID";
                 }
                 if (info.has_bytecode) {
-                    l("{}.bytecode.ptr = &{}\n", dsn, info.bytecode_array_name);
+                    l("{}_bytecode_data := {}\n", info.bytecode_array_name, info.bytecode_array_name);
+                    l("{}.bytecode.ptr = &{}_bytecode_data[0]\n", dsn, info.bytecode_array_name);
                     l("{}.bytecode.size = {}\n", dsn, info.bytecode_array_size);
                 } else {
-                    l("{}.source = transmute(cstring)&{}\n", dsn, info.source_array_name);
+                    l("{}.source = cstring({})\n", dsn, info.source_array_name);
                     const char* d3d11_tgt = hlsl_target(slang, info.stage);
                     if (d3d11_tgt) {
                         l("{}.d3d11_target = \"{}\"\n", dsn, d3d11_tgt);
@@ -506,12 +544,69 @@ void SokolOdinGenerator::gen_uniform_desc_refl_func(const GenInput& gen, const P
     l_close("}}\n");
 }
 
+void SokolOdinGenerator::gen_shader_arrays(const GenInput& gen) {
+    for (int slang_idx = 0; slang_idx < Slang::Num; slang_idx++) {
+        Slang::Enum slang = Slang::from_index(slang_idx);
+        if (gen.args.slang & Slang::bit(slang)) {
+            const Spirvcross& spirvcross = gen.spirvcross[slang];
+            const Bytecode& bytecode = gen.bytecode[slang];
+            for (int snippet_index = 0; snippet_index < (int)gen.inp.snippets.size(); snippet_index++) {
+                const Snippet& snippet = gen.inp.snippets[snippet_index];
+                if ((snippet.type != Snippet::VS) && (snippet.type != Snippet::FS) && (snippet.type != Snippet::CS)) {
+                    continue;
+                }
+                const SpirvcrossSource* src = spirvcross.find_source_by_snippet_index(snippet_index);
+                assert(src);
+                const BytecodeBlob* blob = bytecode.find_blob_by_snippet_index(snippet_index);
+                std::vector<std::string> lines;
+                pystring::splitlines(src->source_code, lines);
+                cbl_start();
+                for (const std::string& line: lines) {
+                    cbl("{}\n", fix_shader_source_for_code_comment(line));
+                }
+                cbl_end();
+                if (blob) {
+                    const std::string array_name = shader_bytecode_array_name(snippet.name, slang);
+                    const std::string file_name = fmt::format("{}.{}", array_name, slang_ext(slang));
+                    sidecar_blobs.push_back({file_name, blob->data});
+                    l("@(private=\"file\")\n{} :: #load(\"{}\", []byte)\n", array_name, file_name);
+                } else {
+                    const std::string array_name = shader_source_array_name(snippet.name, slang);
+                    const std::string file_name = fmt::format("{}.{}", array_name, slang_ext(slang));
+                    std::vector<uint8_t> bytes(src->source_code.begin(), src->source_code.end());
+                    bytes.push_back(0);
+                    sidecar_blobs.push_back({file_name, std::move(bytes)});
+                    l("@(private=\"file\")\n{} :: #load(\"{}\", []byte)\n", array_name, file_name);
+                }
+            }
+        }
+    }
+}
+
 void SokolOdinGenerator::gen_shader_array_start(const GenInput& gen, const std::string& array_name, size_t num_bytes, Slang::Enum slang) {
     l("@(private=\"file\")\n{} := [{}]u8 {{\n", array_name, num_bytes);
 }
 
 void SokolOdinGenerator::gen_shader_array_end(const GenInput& gen) {
     l("\n}}\n");
+}
+
+ErrMsg SokolOdinGenerator::end(const GenInput& gen) {
+    for (const SidecarBlob& blob : sidecar_blobs) {
+        const std::string file_name = sidecar_file(gen.args.output, blob.name);
+        FILE* f = fopen(file_name.c_str(), "wb");
+        if (!f) {
+            return ErrMsg::error(gen.inp.base_path, 0, fmt::format("failed to open sidecar file '{}'", file_name));
+        }
+        if (!blob.bytes.empty()) {
+            if (fwrite(blob.bytes.data(), 1, blob.bytes.size(), f) != blob.bytes.size()) {
+                fclose(f);
+                return ErrMsg::error(gen.inp.base_path, 0, fmt::format("failed to write sidecar file '{}'", file_name));
+            }
+        }
+        fclose(f);
+    }
+    return Generator::end(gen);
 }
 
 std::string SokolOdinGenerator::lang_name() {

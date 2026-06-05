@@ -1,10 +1,18 @@
 #pragma once
 #include "generator.h"
 
+#include <cstdint>
+#include <vector>
+
 namespace shdc::gen {
 
 class SokolOdinGenerator: public Generator {
     std::string mod_prefix;
+    struct SidecarBlob {
+        std::string name;
+        std::vector<uint8_t> bytes;
+    };
+    std::vector<SidecarBlob> sidecar_blobs;
 protected:
     virtual ErrMsg begin(const GenInput& gen);
     virtual void gen_prolog(const GenInput& gen);
@@ -12,6 +20,7 @@ protected:
     virtual void gen_prerequisites(const GenInput& gen);
     virtual void gen_uniform_block_decl(const GenInput& gen, const refl::UniformBlock& ub);
     virtual void gen_storage_buffer_decl(const GenInput& gen, const refl::Type& struc);
+    virtual void gen_shader_arrays(const GenInput& gen);
     virtual void gen_shader_array_start(const GenInput& gen, const std::string& array_name, size_t num_bytes, Slang::Enum slang);
     virtual void gen_shader_array_end(const GenInput& gen);
     virtual void gen_shader_desc_func(const GenInput& gen, const refl::ProgramReflection& prog);
@@ -53,6 +62,7 @@ protected:
     virtual std::string uniform_block_bind_slot_definition(const refl::UniformBlock& ub);
     virtual std::string storage_buffer_bind_slot_definition(const refl::StorageBuffer& sbuf);
     virtual std::string storage_image_bind_slot_definition(const refl::StorageImage& simg);
+    virtual ErrMsg end(const GenInput& gen);
 private:
     virtual void gen_struct_interior_decl_std430(const GenInput& gen, const refl::Type& struc, int pad_to_size);
 };
