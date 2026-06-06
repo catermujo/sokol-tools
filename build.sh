@@ -25,10 +25,25 @@ if [ -f "$TINT_RANGE_H" ] && [ -f "$TINT_RANGE_CC" ]; then
     fi
 fi
 
-if [ $(uname -s) = 'Darwin' ]; then
-    PROFILES=("macos-make-release" "macos-ninja-release")
+UNAME=$(uname -s)
+
+if [ "$UNAME" = 'Darwin' ]; then
+    if [ "$(uname -m)" = "arm64" ]; then
+        PROFILES=("macos-arm64-make-release" "macos-arm64-ninja-release")
+    else
+        PROFILES=("macos-x64-make-release" "macos-x64-ninja-release")
+    fi
+elif [ "$UNAME" = 'Linux' ]; then
+    if [ "$(uname -m)" = "aarch64" ]; then
+        PROFILES=("linux-arm64-make-release" "linux-arm64-ninja-release")
+    else
+        PROFILES=("linux-x64-make-release" "linux-x64-ninja-release")
+    fi
+elif [ "${UNAME#*MINGW}" != "$UNAME" ] || [ "${UNAME#*MSYS}" != "$UNAME" ]; then
+    PROFILES=("win-vstudio-x64-release")
 else
-    PROFILES=("linux-make-release" "linux-ninja-release")
+    echo "Error: unsupported platform '$UNAME'"
+    exit 1
 fi
 
 SHDC_PROFILE=""

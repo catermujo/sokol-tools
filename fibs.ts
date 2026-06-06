@@ -14,12 +14,47 @@ export function configure(c: Configurer): void {
         generator: 'ninja',
         buildMode: 'debug',
     };
+    const linux: ConfigDesc = {
+        name: 'linux-base',
+        platform: 'linux',
+        generator: 'ninja',
+        buildMode: 'debug',
+    };
+    const win: ConfigDesc = {
+        name: 'win-base',
+        platform: 'windows',
+        generator: 'vstudio',
+        buildMode: 'debug',
+    };
+    const macosMake: ConfigDesc = {
+        name: 'macos-make-base',
+        platform: 'macos',
+        generator: 'make',
+        buildMode: 'debug',
+    };
+    const winX64 = { CMAKE_GENERATOR_PLATFORM: 'x64' };
     const osx_x64 = { CMAKE_OSX_ARCHITECTURES: 'x86_64' };
     const osx_arm = { CMAKE_OSX_ARCHITECTURES: 'arm64' };
+    c.addConfig({ ...macosMake, name: 'macos-x64-make-debug', buildMode: 'debug', cmakeVariables: osx_x64 });
+    c.addConfig({ ...macosMake, name: 'macos-x64-make-release', buildMode: 'release', cmakeVariables: osx_x64 });
+    c.addConfig({ ...macosMake, name: 'macos-arm64-make-debug', buildMode: 'debug', cmakeVariables: osx_arm });
+    c.addConfig({ ...macosMake, name: 'macos-arm64-make-release', buildMode: 'release', cmakeVariables: osx_arm });
     c.addConfig({ ...macos, name: 'macos-x64-ninja-debug', buildMode: 'debug', cmakeVariables: osx_x64 });
     c.addConfig({ ...macos, name: 'macos-x64-ninja-release', buildMode: 'release', cmakeVariables: osx_x64 });
-    c.addConfig({ ...macos, name: 'macos-arm-ninja-debug', buildMode: 'debug', cmakeVariables: osx_arm });
-    c.addConfig({ ...macos, name: 'macos-arm-ninja-release', buildMode: 'release', cmakeVariables: osx_arm });
+    c.addConfig({ ...macos, name: 'macos-arm64-ninja-debug', buildMode: 'debug', cmakeVariables: osx_arm });
+    c.addConfig({ ...macos, name: 'macos-arm64-ninja-release', buildMode: 'release', cmakeVariables: osx_arm });
+    c.addConfig({ ...linux, name: 'linux-x64-make-debug', buildMode: 'debug' });
+    c.addConfig({ ...linux, name: 'linux-x64-make-release', buildMode: 'release' });
+    c.addConfig({ ...linux, name: 'linux-arm64-make-debug', buildMode: 'debug' });
+    c.addConfig({ ...linux, name: 'linux-arm64-make-release', buildMode: 'release' });
+    c.addConfig({ ...linux, name: 'linux-x64-ninja-debug', buildMode: 'debug' });
+    c.addConfig({ ...linux, name: 'linux-x64-ninja-release', buildMode: 'release' });
+    c.addConfig({ ...linux, name: 'linux-arm64-ninja-debug', buildMode: 'debug' });
+    c.addConfig({ ...linux, name: 'linux-arm64-ninja-release', buildMode: 'release' });
+    c.addConfig({ ...win, name: 'win-vstudio-x64-debug', buildMode: 'debug', cmakeVariables: winX64 });
+    c.addConfig({ ...win, name: 'win-vstudio-x64-release', buildMode: 'release', cmakeVariables: winX64 });
+    c.addConfig({ ...win, name: 'win-vstudio-arm64-debug', buildMode: 'debug', cmakeVariables: { CMAKE_GENERATOR_PLATFORM: 'arm64' } });
+    c.addConfig({ ...win, name: 'win-vstudio-arm64-release', buildMode: 'release', cmakeVariables: { CMAKE_GENERATOR_PLATFORM: 'arm64' } });
 
     // add a runtests command
     c.addCommand({ name: 'runtests', help: runTestsHelp, run: runTestsRun });
