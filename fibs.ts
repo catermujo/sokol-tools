@@ -50,15 +50,12 @@ export function build(b: Builder): void {
         }
     }
 
-    // sokol-shdc executable
-    b.addTarget('sokol-shdc', 'plain-exe', (t) => {
+    // sokol-shdc static lib
+    b.addTarget('sokol-shdc-lib', 'lib', (t) => {
         t.setDir('src/shdc');
         t.addSources(sokol_shdc_sources);
         t.addIncludeDirectories(['.']);
         t.addDependencies(['fmt', 'getopt', 'pystring', 'glslang', 'SPIRV-Cross', 'tint']);
-        if (b.isLinux()) {
-            t.addLinkOptions(['-static']);
-        }
         if (b.isGcc() || b.isClang()) {
             t.addCompileOptions(['-Wno-unused-result', '-Wno-unused-parameter']);
         }
@@ -68,6 +65,25 @@ export function build(b: Builder): void {
             // conversion from 'x' to 'y' possible loss of data
             t.addCompileOptions(['/wd4100', '/wd4456', '/wd4244' ])
         }
+    });
+
+    // sokol-shdc executable
+    b.addTarget('sokol-shdc', 'plain-exe', (t) => {
+        t.setDir('src/shdc');
+        t.addSources(['main.cc', 'shdc.cc', 'shdc.h']);
+        t.addIncludeDirectories(['.']);
+        t.addDependencies(['sokol-shdc-lib']);
+        if (b.isLinux()) {
+            t.addLinkOptions(['-static']);
+        }
+    });
+
+    // sokol-shdc dll
+    b.addTarget('sokol-shdc-dll', 'dll', (t) => {
+        t.setDir('src/shdc');
+        t.addSources(['shdc.cc', 'shdc.h']);
+        t.addIncludeDirectories(['.']);
+        t.addDependencies(['sokol-shdc-lib']);
     });
 
     // external libs
@@ -330,7 +346,6 @@ const sokol_shdc_sources = [
     'bytecode.h',
     'input.cc',
     'input.h',
-    'main.cc',
     'reflection.cc',
     'reflection.h',
     'spirv.cc',
