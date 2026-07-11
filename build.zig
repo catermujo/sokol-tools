@@ -14,11 +14,86 @@ const tint_public_cpp_flags = [_][]const u8{
     "-DTINT_BUILD_WGSL_WRITER",
 };
 
+const shdc_incl_dirs = [_][]const u8{
+    "src/shdc",
+    "ext/fmt/include",
+    "ext/SPIRV-Cross",
+    "ext/pystring",
+    "ext/getopt/include",
+    "ext/glslang",
+    "ext/glslang/glslang/Public",
+    "ext/glslang/glslang/Include",
+    "ext/glslang/SPIRV",
+    "ext/SPIRV-Tools/include",
+    "ext/tint-extract/include",
+    "ext/tint-extract",
+};
+
 pub fn build(b: *Build) void {
-    _ = buildExe(b, b.standardTargetOptions(.{}), b.standardOptimizeOption(.{}), "");
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+    const lib = buildLib(b, target, optimize, "");
+    _ = buildExe(b, target, optimize, "", lib);
+    _ = buildDll(b, target, optimize, "", lib);
 }
 
 pub fn buildExe(
+    b: *Build,
+    target: Build.ResolvedTarget,
+    mode: std.builtin.OptimizeMode,
+    comptime prefix_path: []const u8,
+    lib: *Build.Step.Compile,
+) *Build.Step.Compile {
+    const dir = prefix_path ++ "src/shdc/";
+    const sources = [_][]const u8{ "main.cc", "shdc.cc" };
+    const flags = common_cpp_flags ++ spvcross_public_cpp_flags ++ tint_public_cpp_flags;
+    const mod = b.createModule(.{
+        .target = target,
+        .optimize = mode,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    mod.linkLibrary(lib);
+    inline for (shdc_incl_dirs) |incl_dir| {
+        mod.addIncludePath(b.path(prefix_path ++ incl_dir));
+    }
+    inline for (sources) |src| {
+        mod.addCSourceFile(.{ .file = b.path(dir ++ src), .flags = &flags });
+    }
+    const exe = b.addExecutable(.{ .name = "sokol-shdc", .root_module = mod });
+    b.installArtifact(exe);
+    return exe;
+}
+
+pub fn buildDll(
+    b: *Build,
+    target: Build.ResolvedTarget,
+    mode: std.builtin.OptimizeMode,
+    comptime prefix_path: []const u8,
+    lib: *Build.Step.Compile,
+) *Build.Step.Compile {
+    const dir = prefix_path ++ "src/shdc/";
+    const sources = [_][]const u8{"shdc.cc"};
+    const flags = common_cpp_flags ++ spvcross_public_cpp_flags ++ tint_public_cpp_flags;
+    const mod = b.createModule(.{
+        .target = target,
+        .optimize = mode,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    mod.linkLibrary(lib);
+    inline for (shdc_incl_dirs) |incl_dir| {
+        mod.addIncludePath(b.path(prefix_path ++ incl_dir));
+    }
+    inline for (sources) |src| {
+        mod.addCSourceFile(.{ .file = b.path(dir ++ src), .flags = &flags });
+    }
+    const dll = b.addLibrary(.{ .name = "sokol-shdc-dll", .linkage = .dynamic, .root_module = mod });
+    b.installArtifact(dll);
+    return dll;
+}
+
+pub fn buildLib(
     b: *Build,
     target: Build.ResolvedTarget,
     mode: std.builtin.OptimizeMode,
@@ -29,7 +104,6 @@ pub fn buildExe(
         "args.cc",
         "bytecode.cc",
         "input.cc",
-        "main.cc",
         "reflection.cc",
         "spirv.cc",
         "spirvcross.cc",
@@ -48,20 +122,6 @@ pub fn buildExe(
         "generators/sokolzig.cc",
         "generators/yaml.cc",
     };
-    const incl_dirs = [_][]const u8{
-        "src/shdc",
-        "ext/fmt/include",
-        "ext/SPIRV-Cross",
-        "ext/pystring",
-        "ext/getopt/include",
-        "ext/glslang",
-        "ext/glslang/glslang/Public",
-        "ext/glslang/glslang/Include",
-        "ext/glslang/SPIRV",
-        "ext/SPIRV-Tools/include",
-        "ext/tint-extract/include",
-        "ext/tint-extract",
-    };
     const flags = common_cpp_flags ++ spvcross_public_cpp_flags ++ tint_public_cpp_flags;
 
     const mod = b.createModule(.{
@@ -77,16 +137,19 @@ pub fn buildExe(
     mod.linkLibrary(libSpirvtools(b, target, mode, prefix_path));
     mod.linkLibrary(libGlslang(b, target, mode, prefix_path));
     mod.linkLibrary(libTint(b, target, mode, prefix_path));
-    inline for (incl_dirs) |incl_dir| {
+    inline for (shdc_incl_dirs) |incl_dir| {
         mod.addIncludePath(b.path(prefix_path ++ incl_dir));
     }
     inline for (sources) |src| {
         mod.addCSourceFile(.{ .file = b.path(dir ++ src), .flags = &flags });
     }
-
-    const exe = b.addExecutable(.{ .name = "sokol-shdc", .root_module = mod });
-    b.installArtifact(exe);
-    return exe;
+    const lib = b.addLibrary(.{
+        .name = "sokol-shdc-lib",
+        .root_module = mod,
+        .linkage = .static,
+    });
+    b.installArtifact(lib);
+    return lib;
 }
 
 fn libGetopt(
