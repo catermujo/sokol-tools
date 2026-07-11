@@ -28,6 +28,7 @@ export function configure(c: Configurer): void {
 export function build(b: Builder): void {
     // global options
     b.addCmakeVariable('CMAKE_CXX_STANDARD', '20');
+    b.addCmakeVariable('CMAKE_POSITION_INDEPENDENT_CODE', 'ON');
     if (b.isMsvc()) {
         // /W4: warning level 4
         // /MP: multithreaded compilation
