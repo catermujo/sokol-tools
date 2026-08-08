@@ -311,7 +311,7 @@ void SokolNimGenerator::gen_shader_desc_func(const GenInput& gen, const ProgramR
                 for (int attr_index = 0; attr_index < StageAttr::Num; attr_index++) {
                     const StageAttr& attr = prog.vs().inputs[attr_index];
                     if (attr.slot >= 0) {
-                        l("result.attrs[{}].base_type = {}\n", attr_index, attr_basetype(attr.type_info.basetype()));
+                        l("result.attrs[{}].baseType = {}\n", attr_index, attr_basetype(attr.type_info.basetype()));
                         if (Slang::is_glsl(slang)) {
                             l("result.attrs[{}].glslName = \"{}\"\n", attr_index, attr.name);
                         } else if (Slang::is_hlsl(slang)) {
