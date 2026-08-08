@@ -101,7 +101,7 @@ void SokolNimGenerator::gen_uniform_block_decl(const GenInput& gen, const Unifor
             l("pad_{}: array[{}, uint8]\n", cur_offset, next_offset - cur_offset);
             cur_offset = next_offset;
         }
-        const std::string align = (0 == cur_offset) ? fmt::format(" {{.align({}).}}", ub.struct_info.align) : "";
+        const std::string align = (0 == cur_offset) ? fmt::format(" {{.align: {}.}}", ub.struct_info.align) : "";
         if (gen.inp.ctype_map.count(uniform.type_as_glsl()) > 0) {
             // user-provided type names
             if (uniform.array_count == 0) {
@@ -156,7 +156,7 @@ void SokolNimGenerator::gen_struct_interior_decl_std430(const GenInput& gen, con
         }
         std::string align = "";
         if ((cur_offset == 0) && (alignment > 0)) {
-            align = fmt::format(" {{.align({}).}}", alignment);
+            align = fmt::format(" {{.align: {}.}}", alignment);
         }
         if (item.type == Type::Struct) {
             // nested structs are regular members in Nim
