@@ -271,7 +271,7 @@ void SokolNimGenerator::gen_storage_buffer_decl(const GenInput& gen, const Type&
 
 void SokolNimGenerator::gen_shader_desc_func(const GenInput& gen, const ProgramReflection& prog) {
     l_open("proc {}ShaderDesc*(backend: sg.Backend): sg.ShaderDesc =\n", to_camel_case(prog.name));
-    l("result.label = \"{}_shader\"\n", prog.name);
+    l("result = sg.ShaderDesc(label: \"{}_shader\")\n", prog.name);
     l_open("case backend:\n");
     for (int i = 0; i < Slang::Num; i++) {
         Slang::Enum slang = Slang::from_index(i);
