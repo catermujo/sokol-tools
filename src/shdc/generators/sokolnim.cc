@@ -101,7 +101,7 @@ void SokolNimGenerator::gen_uniform_block_decl(const GenInput& gen, const Unifor
             l("pad_{}: array[{}, uint8]\n", cur_offset, next_offset - cur_offset);
             cur_offset = next_offset;
         }
-        const std::string align = (0 == cur_offset) ? fmt::format(" {{.align({}).}}", ub.struct_info.align) : "";
+        const std::string align = (0 == cur_offset) ? fmt::format(" {{.align: {}.}}", ub.struct_info.align) : "";
         if (gen.inp.ctype_map.count(uniform.type_as_glsl()) > 0) {
             // user-provided type names
             if (uniform.array_count == 0) {
@@ -156,7 +156,7 @@ void SokolNimGenerator::gen_struct_interior_decl_std430(const GenInput& gen, con
         }
         std::string align = "";
         if ((cur_offset == 0) && (alignment > 0)) {
-            align = fmt::format(" {{.align({}).}}", alignment);
+            align = fmt::format(" {{.align: {}.}}", alignment);
         }
         if (item.type == Type::Struct) {
             // nested structs are regular members in Nim
@@ -271,7 +271,7 @@ void SokolNimGenerator::gen_storage_buffer_decl(const GenInput& gen, const Type&
 
 void SokolNimGenerator::gen_shader_desc_func(const GenInput& gen, const ProgramReflection& prog) {
     l_open("proc {}ShaderDesc*(backend: sg.Backend): sg.ShaderDesc =\n", to_camel_case(prog.name));
-    l("result.label = \"{}_shader\"\n", prog.name);
+    l("result = sg.ShaderDesc(label: \"{}_shader\")\n", prog.name);
     l_open("case backend:\n");
     for (int i = 0; i < Slang::Num; i++) {
         Slang::Enum slang = Slang::from_index(i);
@@ -311,7 +311,7 @@ void SokolNimGenerator::gen_shader_desc_func(const GenInput& gen, const ProgramR
                 for (int attr_index = 0; attr_index < StageAttr::Num; attr_index++) {
                     const StageAttr& attr = prog.vs().inputs[attr_index];
                     if (attr.slot >= 0) {
-                        l("result.attrs[{}].base_type = {}\n", attr_index, attr_basetype(attr.type_info.basetype()));
+                        l("result.attrs[{}].baseType = {}\n", attr_index, attr_basetype(attr.type_info.basetype()));
                         if (Slang::is_glsl(slang)) {
                             l("result.attrs[{}].glslName = \"{}\"\n", attr_index, attr.name);
                         } else if (Slang::is_hlsl(slang)) {
