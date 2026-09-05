@@ -6,3 +6,5 @@ zig-*/
 test/out/
 /sokol-shdc
 .fibs/**/*.dylib
+.fibs/**/*.so
+.fibs/**/*.dll
