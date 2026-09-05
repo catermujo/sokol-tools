@@ -5,3 +5,4 @@ zig-*/
 .zig-*/
 test/out/
 /sokol-shdc
+.fibs/**/*.dylib
